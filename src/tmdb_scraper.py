@@ -79,7 +79,7 @@ def get_tmdb_details(title, show_title=None, season=None, episode_num=None, api_
 
 def query_gemini_for_summary(tmdb_id, title, show_title, season, episode_num, api_key):
     client = genai.Client(api_key=api_key)
-    if show_titlenot in ['A Star Wars Story', 'Prequel Trilogy', 'Original Trilogy', 'Sequel Trilogy']:
+    if show_title not in ['A Star Wars Story', 'Prequel Trilogy', 'Original Trilogy', 'Sequel Trilogy']:
         search_query = f"Star Wars {show_title}"
     else:
         search_query = f"Star Wars {title}"
