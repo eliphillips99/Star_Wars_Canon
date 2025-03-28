@@ -6,7 +6,7 @@ from google import genai
 
 def get_tmdb_details_id(tmdb_id, api_key, is_tv=False):
     """
-    Fetch details directly using the TMDB ID.
+    Fetch details directly using the TMDB ID and return a simplified dictionary.
 
     Args:
         tmdb_id (int): The TMDB ID of the movie or show.
@@ -14,13 +14,23 @@ def get_tmdb_details_id(tmdb_id, api_key, is_tv=False):
         is_tv (bool): Whether the ID corresponds to a TV show.
 
     Returns:
-        dict: Details of the movie or show.
+        dict: Simplified details of the movie or show.
     """
     base_url = "https://api.themoviedb.org/3"
     media_url = f"{base_url}/tv/{tmdb_id}" if is_tv else f"{base_url}/movie/{tmdb_id}"
     response = requests.get(media_url, params={"api_key": api_key, "append_to_response": "credits"})
     if response.status_code == 200:
-        return response.json()
+        data = response.json()
+        return {
+            "id": data.get("id"),
+            "title": data.get("name") if is_tv else data.get("title"),
+            "release_date": data.get("first_air_date") if is_tv else data.get("release_date"),
+            "rating": data.get("vote_average"),
+            "cast": [
+                {"name": person.get("name"), "character": person.get("character"), "gender": person.get("gender")}
+                for person in data.get("credits", {}).get("cast", [])
+            ]
+        }
     else:
         print(f"Failed to fetch details for TMDB ID {tmdb_id}")
         return None
@@ -28,7 +38,7 @@ def get_tmdb_details_id(tmdb_id, api_key, is_tv=False):
 
 def get_tmdb_details_name(title=None, show_title=None, season=None, episode_num=None, api_key=None):
     """
-    Fetch details by searching for a title.
+    Fetch details by searching for a title and return a simplified dictionary.
 
     Args:
         title (str): The title of the movie.
@@ -38,7 +48,7 @@ def get_tmdb_details_name(title=None, show_title=None, season=None, episode_num=
         api_key (str): The TMDB API key.
 
     Returns:
-        dict: Details of the movie or show.
+        dict: Simplified details of the movie or show.
     """
     base_url = "https://api.themoviedb.org/3"
     is_tv = show_title not in ['A Star Wars Story', 'Prequel Trilogy', 'Original Trilogy', 'Sequel Trilogy']
@@ -53,29 +63,38 @@ def get_tmdb_details_name(title=None, show_title=None, season=None, episode_num=
             return None
 
         # Get the correct TV show or miniseries
-        for result in response.json()['results']:
-            if show_title.lower() in result.get('name', '').lower():
-                tv_id = result['id']
-                if season and episode_num:
-                    season_url = f"{base_url}/tv/{tv_id}/season/{season}"
-                    season_response = requests.get(season_url, params={"api_key": api_key, "append_to_response": "credits"})
-                    if season_response.status_code == 200:
-                        season_data = season_response.json()
-                        episode_data = next((ep for ep in season_data['episodes'] if ep['episode_number'] == int(episode_num)), None)
-                        if episode_data:
-                            episode_data['show_name'] = result.get('name')
-                            episode_data['season_air_date'] = season_data.get('air_date', 'No release date available')
-                            episode_data['credits'] = season_data.get('credits', {})
-                            return episode_data
-                else:
-                    tv_url = f"{base_url}/tv/{tv_id}"
-                    tv_response = requests.get(tv_url, params={"api_key": api_key, "append_to_response": "credits"})
-                    if tv_response.status_code == 200:
-                        tv_data = tv_response.json()
-                        tv_data['show_name'] = result.get('name')
-                        return tv_data
-        print(f"No matching show title found for '{show_title}'")
-        return None
+        tv_id = response.json()['results'][0]['id']
+        if season and episode_num:
+            season_url = f"{base_url}/tv/{tv_id}/season/{season}"
+            season_response = requests.get(season_url, params={"api_key": api_key})
+            if season_response.status_code == 200:
+                season_data = season_response.json()
+                episode_data = next(
+                    (ep for ep in season_data['episodes'] if ep['episode_number'] == int(episode_num)), None
+                )
+                if episode_data:
+                    return {
+                        "id": episode_data.get("id"),
+                        "title": episode_data.get("name"),
+                        "air_date": episode_data.get("air_date"),
+                        "season": season,
+                        "episode": episode_num
+                    }
+        else:
+            tv_url = f"{base_url}/tv/{tv_id}"
+            tv_response = requests.get(tv_url, params={"api_key": api_key})
+            if tv_response.status_code == 200:
+                data = tv_response.json()
+                return {
+                    "id": data.get("id"),
+                    "title": data.get("name"),
+                    "release_date": data.get("first_air_date"),
+                    "rating": data.get("vote_average"),
+                    "cast": [
+                        {"name": person.get("name"), "character": person.get("character"), "gender": person.get("gender")}
+                        for person in data.get("credits", {}).get("cast", [])
+                    ]
+                }
     else:
         # Search for the movie
         search_url = f"{base_url}/search/movie"
@@ -86,17 +105,24 @@ def get_tmdb_details_name(title=None, show_title=None, season=None, episode_num=
             return None
 
         # Get the correct movie
-        for result in response.json()['results']:
-            if title.lower() in result.get('title', '').lower():
-                movie_id = result['id']
-                movie_url = f"{base_url}/movie/{movie_id}"
-                movie_response = requests.get(movie_url, params={"api_key": api_key, "append_to_response": "credits"})
-                if movie_response.status_code == 200:
-                    movie_data = movie_response.json()
-                    movie_data['show_name'] = result.get('title')
-                    return movie_data
-        print(f"No matching title found for '{title}'")
-        return None
+        movie_id = response.json()['results'][0]['id']
+        movie_url = f"{base_url}/movie/{movie_id}"
+        movie_response = requests.get(movie_url, params={"api_key": api_key})
+        if movie_response.status_code == 200:
+            data = movie_response.json()
+            return {
+                "id": data.get("id"),
+                "title": data.get("title"),
+                "release_date": data.get("release_date"),
+                "rating": data.get("vote_average"),
+                "cast": [
+                    {"name": person.get("name"), "character": person.get("character"), "gender": person.get("gender")}
+                    for person in data.get("credits", {}).get("cast", [])
+                ]
+            }
+
+    print(f"No matching title found for '{title}'")
+    return None
 
 
 def get_tmdb_details(title=None, show_title=None, season=None, episode_num=None, api_key=None, tmdb_id=None):
@@ -193,24 +219,20 @@ def process_media_entry(row, tmdb_key, gem_key):
         return None
 
     tmdb_id = media['id']
-    first_air_date = media.get('season_air_date') or media.get('release_date', 'No release date available')
+    first_air_date = media.get('release_date', 'No release date available')
     if first_air_date != 'No release date available':
         year, month, _ = first_air_date.split('-')
     else:
         year, month = 'No release year available', 'No release month available'
 
-    cast = media.get('credits', {}).get('cast', []) + media.get('credits', {}).get('guest_stars', [])
-    cast_details = [
-        {'name': person['name'], 'character': person['character'], 'gender': person.get('gender', 'Unknown')}
-        for person in cast
-    ]
+    cast_details = media.get('cast', [])
 
     details = {
         'tmdb_id': tmdb_id,
-        'title': media.get('name') or media.get('title'),
-        'show_name': media.get('show_name'),
-        'rating': media.get('vote_average', 'No rating available'),
-        'tmdb_rating_processed': media.get('vote_average', 0) / 2,
+        'title': media.get('title'),
+        'show_name': show_title,
+        'rating': media.get('rating', 'No rating available'),
+        'tmdb_rating_processed': media.get('rating', 0) / 2,
         'release_year': year,
         'release_month': month,
         'cast': cast_details

@@ -2,7 +2,7 @@ from tmdb_scraper import get_tmdb_details
 
 def lookup_media(tmdb_key):
     """
-    Look up a single media entry by either TMDB ID or name.
+    Look up a single media entry by either TMDB ID or name, and indicate whether it is a show or movie.
 
     Args:
         tmdb_key (str): The TMDB API key.
@@ -11,10 +11,12 @@ def lookup_media(tmdb_key):
     
     if choice == "1":
         tmdb_id = int(input("Enter the TMDB ID: "))
-        details = get_tmdb_details(tmdb_id=tmdb_id, api_key=tmdb_key)
+        is_tv = input("Is this a TV show? (yes/no): ").strip().lower() == "yes"
+        details = get_tmdb_details(tmdb_id=tmdb_id, api_key=tmdb_key, show_title="TV" if is_tv else None)
     elif choice == "2":
-        title = input("Enter the title of the movie: ").strip()
-        show_title = input("Enter the show title (or press Enter if not applicable): ").strip() or None
+        title = input("Enter the title of the movie or show: ").strip()
+        is_tv = input("Is this a TV show? (yes/no): ").strip().lower() == "yes"
+        show_title = title if is_tv else None
         season = input("Enter the season number (or press Enter if not applicable): ").strip()
         episode_num = input("Enter the episode number (or press Enter if not applicable): ").strip()
         
