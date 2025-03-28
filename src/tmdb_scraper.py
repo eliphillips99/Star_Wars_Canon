@@ -3,6 +3,7 @@ import pandas as pd
 import gspread
 import time
 from google import genai
+from tmdb_overview import get_tmdb_overview
 
 def get_tmdb_details_id(tmdb_id, api_key, is_tv=False):
     """
@@ -226,6 +227,7 @@ def process_media_entry(row, tmdb_key, gem_key):
         year, month = 'No release year available', 'No release month available'
 
     cast_details = media.get('cast', [])
+    overview = get_tmdb_overview(tmdb_id, tmdb_key, is_tv=show_title is not None)  # Fetch the overview
 
     details = {
         'tmdb_id': tmdb_id,
@@ -235,7 +237,8 @@ def process_media_entry(row, tmdb_key, gem_key):
         'tmdb_rating_processed': media.get('rating', 0) / 2,
         'release_year': year,
         'release_month': month,
-        'cast': cast_details
+        'cast': cast_details,
+        'overview': overview  # Include the overview in the details
     }
 
     # Query Gemini for plot summary
@@ -287,6 +290,12 @@ def main():
     """
     api_keys = load_api_keys()
     df = load_google_sheet_data(api_keys["gspread"])
+    
+    # Variable to control how many entries to process
+    max_entries = input("Enter the number of entries to process (or press Enter to process all): ").strip()
+    max_entries = int(max_entries) if max_entries else len(df)
+    df = df.head(max_entries)  # Limit the DataFrame to the specified number of entries
+
     results = process_all_entries(df, api_keys["tmdb"], api_keys["gemini"])
     save_results_to_csv(results, "C:\\Users\\eligp\\OneDrive\\Documents\\Coding Projects\\Star_Wars_Canon\\data\\Timeline_with_TMDb.csv")
 
