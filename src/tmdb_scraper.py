@@ -4,6 +4,9 @@ import gspread
 import time
 from google import genai
 from tmdb_overview import get_tmdb_overview
+from tmdb.api import get_tmdb_details
+from tmdb.utils import extract_cast, extract_genres, extract_character_names
+from ai.summary import generate_plot_summary
 
 def get_tmdb_details_id(tmdb_id, api_key, is_tv=False):
     """
@@ -198,54 +201,43 @@ def load_google_sheet_data(api_key):
 
 def process_media_entry(row, tmdb_key, gem_key):
     """
-    Process a single media entry to fetch TMDB details and query Gemini for a summary.
+    Process a single media entry to fetch TMDb details and AI plot summary.
 
     Args:
         row (pd.Series): A row from the DataFrame containing media details.
-        tmdb_key (str): The TMDB API key.
+        tmdb_key (str): The TMDb API key.
         gem_key (str): The Gemini API key.
 
     Returns:
         dict: A dictionary containing processed media details.
     """
-    title = row["Name"]
-    show_title = row.get("Show/Trilogy", None)
-    season = row.get("Season", None)
-    episode_num = row.get("Episode Num", None)
-    print(title)
+    tmdb_id = row["TMDB ID"]
+    is_tv = row.get("Type", "").lower() == "tv"
+    data = get_tmdb_details(tmdb_id, tmdb_key, is_tv)
 
-    # Get TMDb details
-    media = get_tmdb_details(title, show_title, season, episode_num, api_key=tmdb_key)
-    if not media:
+    if not data:
         return None
 
-    tmdb_id = media['id']
-    first_air_date = media.get('release_date', 'No release date available')
-    if first_air_date != 'No release date available':
-        year, month, _ = first_air_date.split('-')
-    else:
-        year, month = 'No release year available', 'No release month available'
+    cast = extract_cast(data)
+    genres = extract_genres(data)
+    character_names = extract_character_names(data)
+    overview = data.get("overview", "No overview available")
+    plot_summary = generate_plot_summary(overview)
 
-    cast_details = media.get('cast', [])
-    overview = get_tmdb_overview(tmdb_id, tmdb_key, is_tv=show_title is not None)  # Fetch the overview
-
-    details = {
-        'tmdb_id': tmdb_id,
-        'title': media.get('title'),
-        'show_name': show_title,
-        'rating': media.get('rating', 'No rating available'),
-        'tmdb_rating_processed': media.get('rating', 0) / 2,
-        'release_year': year,
-        'release_month': month,
-        'cast': cast_details,
-        'overview': overview  # Include the overview in the details
+    return {
+        "id": tmdb_id,
+        "title": data["title"],
+        "show_name": data.get("name") if is_tv else None,
+        "release_date": data.get("release_date"),
+        "rating": data.get("vote_average"),
+        "processed_rating": data.get("vote_average") / 2 if data.get("vote_average") else None,
+        "cast": cast,
+        "actors": [actor["name"] for actor in cast],
+        "genres": genres,
+        "character_names": character_names,
+        "overview": overview,
+        "ai_plot_summary": plot_summary,
     }
-
-    # Query Gemini for plot summary
-    summary = query_gemini_for_summary(tmdb_id, details['title'], show_title, season, episode_num, gem_key)
-    details['Plot Summary'] = summary
-
-    return details
 
 
 def process_all_entries(df, tmdb_key, gem_key):

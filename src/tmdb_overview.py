@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import gspread
-from tmdb_scraper import load_google_sheet_data, get_tmdb_details_id
+from tmdb_scraper import get_tmdb_details_id
 
 def get_tmdb_overview(tmdb_id, api_key, is_tv=False):
     """
@@ -17,7 +17,7 @@ def get_tmdb_overview(tmdb_id, api_key, is_tv=False):
     """
     base_url = "https://api.themoviedb.org/3"
     media_url = f"{base_url}/tv/{tmdb_id}" if is_tv else f"{base_url}/movie/{tmdb_id}"
-    response = requests.get(media_url, params={"api_key": api_key})
+    response = requests.get(media_url, params={"api_key": api_key, "append_to_response": "credits"})
     if response.status_code == 200:
         data = response.json()
         return data.get("overview", "No overview available")
