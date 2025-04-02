@@ -15,4 +15,13 @@ def load_google_sheet_data(api_key):
     sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1PyWmeM1nwzQV6anIfTp9nre5Wg6-eTfFyYBk8R9z4cY/edit")
     worksheet = sh.worksheet("Timeline")
     data = worksheet.get_all_records()  # Import all data without specifying headers
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+
+    # Normalize column names
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Debugging: Print the normalized column names and the first few rows
+    print("Normalized DataFrame Columns:", df.columns.tolist())
+    print("First Few Rows of DataFrame:\n", df.head())
+
+    return df

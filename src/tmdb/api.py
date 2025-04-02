@@ -55,3 +55,27 @@ def get_episode_release_date(tmdb_id, api_key):
     if episodes:
         return episodes[0].get("air_date", "Unknown")
     return "Unknown"
+
+def get_episode_details(tv_id, season, episode, api_key):
+    """
+    Fetch details for a specific episode of a TV show.
+
+    Args:
+        tv_id (int): The TMDB ID of the TV show.
+        season (int): The season number.
+        episode (int): The episode number.
+        api_key (str): The TMDB API key.
+
+    Returns:
+        dict: The details of the specific episode.
+    """
+    endpoint = f"{BASE_URL}/tv/{tv_id}/season/{season}/episode/{episode}"
+    print(f"Fetching episode details from TMDB API: {endpoint}")
+    response = requests.get(endpoint, params={"api_key": api_key, "append_to_response": "credits"})
+    if response.status_code == 200:
+        data = response.json()
+        #print(f"Episode details fetched: {data}")
+        return data
+    else:
+        print(f"Failed to fetch episode details for TV ID {tv_id}, Season {season}, Episode {episode}")
+        return None
