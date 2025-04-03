@@ -76,14 +76,15 @@ def find_tmdb_id(row, tmdb_key):
     print(f"Ambiguous results for query: {search_query}. Please review manually.")
     return None, None
 
-def process_media_entry(row, tmdb_key, gem_key):
+def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
     """
-    Process a single media entry to fetch TMDb details and AI plot summary.
+    Process a single media entry to fetch TMDb details and optionally AI plot summary.
 
     Args:
         row (pd.Series): A row from the DataFrame containing media details.
         tmdb_key (str): The TMDb API key.
         gem_key (str): The Gemini API key.
+        process_gemini (bool): Whether to process Gemini summaries.
 
     Returns:
         dict: A dictionary containing processed media details.
@@ -131,17 +132,19 @@ def process_media_entry(row, tmdb_key, gem_key):
     character_names = extract_character_names(data if not is_tv else episode_data)
     overview = data.get("overview", "No overview available") if not is_tv else episode_data.get("overview", "No overview available")
 
-    # Generate plot summary
-    plot_summary = generate_plot_summary(
-        tmdb_id=episode_id if is_tv else show_id,
-        name=title,
-        show_name=show_name,
-        season_num=row.get("season"),
-        episode_num=row.get("episode number"),
-        release_date=release_date,
-        is_tv=is_tv,
-        api_key=gem_key
-    )
+    # Generate plot summary only if process_gemini is True
+    plot_summary = None
+    if process_gemini:
+        plot_summary = generate_plot_summary(
+            tmdb_id=episode_id if is_tv else show_id,
+            name=title,
+            show_name=show_name,
+            season_num=row.get("season"),
+            episode_num=row.get("episode number"),
+            release_date=release_date,
+            is_tv=is_tv,
+            api_key=gem_key
+        )
 
     return {
         "id": episode_id if is_tv else show_id,  # Use episode ID for TV shows, show ID for movies
@@ -156,10 +159,10 @@ def process_media_entry(row, tmdb_key, gem_key):
         "genres": genres,  # Populate genres
         "character_names": character_names,
         "overview": overview,
-        "ai_plot_summary": plot_summary,  # Include the generated plot summary
+        "ai_plot_summary": plot_summary,  # Include the generated plot summary if processed
     }
 
-def process_all_entries(df, tmdb_key, gem_key, items_to_process=None):
+def process_all_entries(df, tmdb_key, gem_key, items_to_process=None, process_gemini=True):
     """
     Process all media entries in the DataFrame.
 
@@ -168,6 +171,7 @@ def process_all_entries(df, tmdb_key, gem_key, items_to_process=None):
         tmdb_key (str): The TMDb API key.
         gem_key (str): The Gemini API key.
         items_to_process (int, optional): The number of entries to process. Defaults to None (process all).
+        process_gemini (bool): Whether to process Gemini summaries.
 
     Returns:
         pd.DataFrame: A DataFrame containing processed media details.
@@ -177,7 +181,7 @@ def process_all_entries(df, tmdb_key, gem_key, items_to_process=None):
     rows_to_process = df.head(items_to_process) if items_to_process else df
 
     for _, row in rows_to_process.iterrows():
-        details = process_media_entry(row, tmdb_key, gem_key)
+        details = process_media_entry(row, tmdb_key, gem_key, process_gemini=process_gemini)
         if details:
             results.append(details)
 

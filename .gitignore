@@ -1,0 +1,17 @@
+# Ignore API key files
+ref/gspread_API_key.txt
+ref/tmdb_API_key.txt
+ref/gemini_API_key.txt
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore system files
+.DS_Store
+Thumbs.db

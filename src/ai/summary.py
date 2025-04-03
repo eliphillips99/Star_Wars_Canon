@@ -10,4 +10,5 @@ def generate_plot_summary(tmdb_id, name, show_name, season_num, episode_num, rel
     if is_tv:
         prompt += f"\nSeason: {season_num}\nEpisode: {episode_num}"
     response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    print(f"Generated plot summary for TMDB ID {tmdb_id}: {response.text}")
     return response.text
