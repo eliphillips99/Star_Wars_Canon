@@ -17,13 +17,20 @@ def find_tmdb_id(row, tmdb_key):
         tmdb_key (str): The TMDb API key.
 
     Returns:
-        tuple: A tuple containing the show ID (if applicable) and the episode ID (if applicable).
+        tuple: A tuple containing the show ID (if applicable), the episode ID (if applicable),
+               and a manual review flag.
     """
-    title = row.get("name")
+    # Debugging: Print the entire row to inspect its contents
+    print(f"DEBUG ROW: {row.to_dict()}")
+
+    title = row.get("title")
     show_name = row.get("show/trilogy")
     season = row.get("season")
     episode_num = row.get("episode number")
     media_type = row.get("media type", "").strip().lower()  # Access normalized column name
+
+    # Debugging: Print the extracted title value
+    print(f"DEBUG TITLE: {title}")
 
     # Debugging: Print the media_type value
     print(f"MEDIA TYPE: {media_type}")
@@ -43,38 +50,44 @@ def find_tmdb_id(row, tmdb_key):
     else:
         search_query = f"Star Wars {title}" if title else None
 
+    print(f"DEBUG TITLE: {title} (is_tv={is_tv})")
+    print(f"DEBUG SEARCH: {search_query} (is_tv={is_tv})")
     if not search_query:
         print("No valid search query could be constructed.")
-        return None, None
+        return None, None, False
 
     print(f"Searching TMDB for query: {search_query} (is_tv={is_tv})")
     search_results = search_tmdb(query=search_query, api_key=tmdb_key, is_tv=is_tv)
     if not search_results.get("results"):
         print(f"No results found for query: {search_query}")
-        return None, None
+        return None, None, False
 
     # Refine the search results
-    for result in search_results["results"]:
-        show_id = result["id"]
-        print(f"TMDB Show ID found: {show_id} (is_tv={is_tv})")
+    manual_review = False
+    first_result = search_results["results"][0]
+    show_id = first_result["id"]
+    print(f"TMDB Show ID found: {show_id} (is_tv={is_tv})")
 
-        # Fetch details for the result
-        if is_tv and season and episode_num:
-            # Fetch episode-specific details using the show ID
-            episode_details = get_episode_details(show_id, season, episode_num, tmdb_key)
-            if episode_details:
-                episode_id = episode_details.get("id")
-                print(f"Episode-specific TMDB ID: {episode_id}")
-                return show_id, episode_id
-        else:
-            details = get_tmdb_details(show_id, tmdb_key, is_tv=is_tv)
-            if is_tv and details.get("name") == show_name:
-                return show_id, None
-            elif not is_tv and details.get("title") == title:
-                return show_id, None
+    # Fetch details for the result
+    if is_tv and season and episode_num:
+        episode_details = get_episode_details(show_id, season, episode_num, tmdb_key)
+        if episode_details:
+            episode_id = episode_details.get("id")
+            print(f"Episode-specific TMDB ID: {episode_id}")
+            return show_id, episode_id, manual_review
+    else:
+        details = get_tmdb_details(show_id, tmdb_key, is_tv=is_tv)
+        if is_tv and details.get("name") == show_name:
+            return show_id, None, manual_review
+        elif not is_tv and details.get("title") == title:
+            return show_id, None, manual_review
 
-    print(f"Ambiguous results for query: {search_query}. Please review manually.")
-    return None, None
+    # If multiple results exist, flag for manual review
+    if len(search_results["results"]) > 1:
+        print(f"Ambiguous results for query: {search_query}. Using the first result but flagging for review.")
+        manual_review = True
+
+    return show_id, None, manual_review
 
 def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
     """
@@ -90,7 +103,7 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
         dict: A dictionary containing processed media details.
     """
     # Find the TMDB ID and determine if it's a TV show
-    show_id, episode_id = find_tmdb_id(row, tmdb_key)
+    show_id, episode_id, manual_review = find_tmdb_id(row, tmdb_key)
     if not show_id:
         print(f"Skipping entry: {row}")
         return None
@@ -160,6 +173,7 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
         "character_names": character_names,
         "overview": overview,
         "ai_plot_summary": plot_summary,  # Include the generated plot summary if processed
+        "manual_review": "needs review" if manual_review else "",  # Add manual review flag
     }
 
 def process_all_entries(df, tmdb_key, gem_key, items_to_process=None, process_gemini=True):
