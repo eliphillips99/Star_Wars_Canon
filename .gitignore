@@ -15,3 +15,5 @@ env/
 # Ignore system files
 .DS_Store
 Thumbs.db
+src/ai/__pycache__/summary.cpython-39.pyc
+src/tmdb/__pycache__/scraper.cpython-39.pyc
