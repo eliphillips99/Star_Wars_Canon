@@ -32,7 +32,7 @@ def generate_plot_summary(tmdb_id, name, show_name, season_num, episode_num, rel
     time.sleep(4)  # 4 seconds delay ensures no more than 15 calls per minute
 
     response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-    print(f"Generated plot summary for TMDB ID {tmdb_id}: {response.text}")
+    print(f"AI SUMMARY: {response.text}")
     return response.text
 
 def generate_summaries_from_csv(input_csv, output_csv, api_key):

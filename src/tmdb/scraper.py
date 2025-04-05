@@ -21,7 +21,7 @@ def find_tmdb_id(row, tmdb_key):
                and a manual review flag.
     """
     # Debugging: Print the entire row to inspect its contents
-    print(f"DEBUG ROW: {row.to_dict()}")
+    print(f"CURRENT ROW: {row.to_dict()}")
 
     title = row.get("title")
     show_name = row.get("show/trilogy")
