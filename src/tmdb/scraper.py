@@ -29,12 +29,6 @@ def find_tmdb_id(row, tmdb_key):
     episode_num = row.get("episode number")
     media_type = row.get("media type", "").strip().lower()  # Access normalized column name
 
-    # Debugging: Print the extracted title value
-    print(f"DEBUG TITLE: {title}")
-
-    # Debugging: Print the media_type value
-    print(f"MEDIA TYPE: {media_type}")
-
     # Determine if the entry is a TV show based on the "Media Type" column
     if media_type == "tv":
         is_tv = True
@@ -50,8 +44,6 @@ def find_tmdb_id(row, tmdb_key):
     else:
         search_query = f"Star Wars {title}" if title else None
 
-    print(f"DEBUG TITLE: {title} (is_tv={is_tv})")
-    print(f"DEBUG SEARCH: {search_query} (is_tv={is_tv})")
     if not search_query:
         print("No valid search query could be constructed.")
         return None, None, False
@@ -66,7 +58,7 @@ def find_tmdb_id(row, tmdb_key):
     manual_review = False
     first_result = search_results["results"][0]
     show_id = first_result["id"]
-    print(f"TMDB Show ID found: {show_id} (is_tv={is_tv})")
+    print(f"TMDB Show ID found: {show_id}")
 
     # Fetch details for the result
     if is_tv and season and episode_num:
@@ -108,7 +100,6 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
         print(f"Skipping entry: {row}")
         return None
 
-    print(f"Processing TMDB Show ID: {show_id} (Episode ID: {episode_id})")
     is_tv = row.get("media type", "").strip().lower() == "tv"
 
     if is_tv and episode_id:
@@ -155,6 +146,7 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
             season_num=row.get("season"),
             episode_num=row.get("episode number"),
             release_date=release_date,
+            overview=overview,
             is_tv=is_tv,
             api_key=gem_key
         )
