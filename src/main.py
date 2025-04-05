@@ -11,7 +11,7 @@ def main():
     df = load_google_sheet_data(API_KEYS["gspread"])
 
     # Specify the number of items to process
-    items_to_process = 25  # Change this value to process a different number of entries
+    items_to_process = 20  # Change this value to process a different number of entries
 
     # Process the specified number of entries, remove items_to_process to process all
     # results_df = process_all_entries(df, API_KEYS["tmdb"], API_KEYS["gemini"])
