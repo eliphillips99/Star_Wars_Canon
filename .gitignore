@@ -17,3 +17,6 @@ env/
 Thumbs.db
 src/ai/__pycache__/summary.cpython-39.pyc
 src/tmdb/__pycache__/scraper.cpython-39.pyc
+src/__pycache__/api_config.cpython-39.pyc
+src/ai/__pycache__/summary.cpython-39.pyc
+
