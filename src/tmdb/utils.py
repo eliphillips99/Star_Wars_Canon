@@ -9,6 +9,9 @@ def extract_cast(data):
     Returns:
         list: A list of dictionaries containing cast details.
     """
+    if not data:  # Check if data is None or empty
+        return []  # Return an empty list if data is None
+
     def map_gender(gender_id):
         return {0: "Unknown", 1: "Female", 2: "Male", 3: "Nonbinary"}.get(gender_id, "Unknown")
 
@@ -46,6 +49,8 @@ def extract_character_names(data):
     Returns:
         list: A list of character names.
     """
+    if not data:  # Check if data is None or empty
+        return []  # Return an empty list if data is None
     # Combine main cast and guest stars
     all_cast = data.get("credits", {}).get("cast", []) + data.get("credits", {}).get("guest_stars", [])
     return [cast_member["character"] for cast_member in all_cast]

@@ -103,6 +103,8 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
 
     is_tv = row.get("media type", "").strip().lower() == "tv"
 
+    episode_data = None
+
     if is_tv and episode_id:
         # Fetch episode-specific details
         episode_data = get_episode_details(show_id, row.get("season"), row.get("episode number"), tmdb_key)
@@ -131,6 +133,11 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
         rating = data.get("vote_average")  # Show or movie rating
         show_name = None  # No show name for movies
         genres = extract_genres(data)  # Extract genres from movie or show data
+
+    if not data:  # Check if data is None
+        data = {}
+    if not episode_data:  # Check if episode_data is None
+        episode_data = {}
 
     # Extract additional details
     cast = extract_cast(data if not is_tv else episode_data)
