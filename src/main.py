@@ -18,7 +18,7 @@ def main():
         df = load_google_sheet_data(API_KEYS["gspread"])
 
         # Specify the number of items to process
-        items_to_process = 13  # Change this value to process a different number of entries
+        items_to_process = 14  # Change this value to process a different number of entries
 
         # Process the specified number of entries, remove items_to_process to process all
         results_df = process_all_entries(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process, process_gemini=False)
@@ -27,7 +27,7 @@ def main():
         save_results_to_csv(results_df, "data/Scraped_Timeline.csv")
 
         # Write results to a new sheet in the original Google Sheet
-        write_dataframe_to_sheet(results_df, API_KEYS["gspread"], sheet_name="Scraped Data")
+        write_dataframe_to_sheet(results_df, "ref/service_account.json", sheet_name="Scraped Data")
     elif mode == 2:  # Compare to integer
         input_csv = "data/Scraped_Timeline.csv"
         output_csv = "data/Timeline_with_Summaries.csv"
