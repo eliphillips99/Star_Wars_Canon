@@ -1,4 +1,4 @@
-from tmdb.scraper import process_all_entries
+from tmdb.scraper import process_all_entries, process_all_entries_multithreading
 from google_sheets.sheets import load_google_sheet_data, write_dataframe_to_sheet
 from data.output import save_results_to_csv
 from api_config import API_KEYS
@@ -20,8 +20,13 @@ def main():
         # Specify the number of items to process
         items_to_process = 14  # Change this value to process a different number of entries
 
-        # Process the specified number of entries, remove items_to_process to process all
-        results_df = process_all_entries(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process, process_gemini=False)
+        process_gemini = False  # Set to True to process Gemini summaries
+
+         # Process the specified number of entries
+        if not process_gemini:
+            results_df = process_all_entries_multithreading(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process)
+        else:
+            results_df = process_all_entries(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process, process_gemini=process_gemini)
 
         # Save results to a CSV
         save_results_to_csv(results_df, "data/Scraped_Timeline.csv")

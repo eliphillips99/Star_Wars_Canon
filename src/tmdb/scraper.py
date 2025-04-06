@@ -4,6 +4,7 @@ from ai.summary import generate_plot_summary
 import pandas as pd
 import sys
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 # Add the src directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -157,7 +158,7 @@ def process_media_entry(row, tmdb_key, gem_key, process_gemini=True):
         "title": title,  # Episode title for TV shows, movie title for movies
         "show_name": show_name,  # Show name for TV shows
         "release_date": release_date,  # Episode air date for TV shows, release date for movies
-        "rating": rating,  # Episode rating for TV shows, movie rating for movies
+        "tmdb_rating": rating,  # Episode rating for TV shows, movie rating for movies
         "processed_rating": rating / 2 if rating else None,
         "cast": cast,
         "actors": [actor["name"] for actor in cast],
@@ -193,3 +194,43 @@ def process_all_entries(df, tmdb_key, gem_key, items_to_process=None, process_ge
 
     # Convert results to a DataFrame
     return pd.DataFrame(results)
+
+def process_all_entries_multithreading(df, tmdb_key, gem_key, items_to_process=None):
+    """
+    Process all media entries in the DataFrame using multithreading.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing media details.
+        tmdb_key (str): The TMDb API key.
+        gem_key (str): The Gemini API key.
+        items_to_process (int, optional): The number of entries to process. Defaults to None (process all).
+
+    Returns:
+        pd.DataFrame: A DataFrame containing processed media details.
+    """
+    
+    df = df.reset_index(drop=True)  # Reset index to avoid issues with multithreading
+
+    if items_to_process:
+        df = df.head(items_to_process)
+    
+     # Process rows in parallel
+    with ThreadPoolExecutor() as executor:
+        results = list(
+            executor.map(
+                lambda row: process_media_entry(row, tmdb_key, gem_key),
+                [row for _, row in df.iterrows()]
+            )
+        )
+
+    results_df = pd.DataFrame(results)
+
+    results_df["index"] = df["index"].values
+
+    print(results_df)
+
+    merged_df = pd.merge(df, results_df, on="index")
+    merged_df = merged_df.sort_values("index")
+    #merged_df = merged_df.drop(columns=["index"])
+
+    return merged_df
