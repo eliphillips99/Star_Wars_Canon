@@ -3,6 +3,9 @@ ref/gspread_API_key.txt
 ref/tmdb_API_key.txt
 ref/gemini_API_key.txt
 
+# Ignore service account files
+ref/service_account.json
+
 # Ignore Python cache files
 __pycache__/
 *.pyc
