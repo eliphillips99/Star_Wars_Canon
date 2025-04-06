@@ -1,6 +1,6 @@
-from tmdb.api import get_tmdb_details, get_episode_details, search_tmdb
-from tmdb.utils import extract_cast, extract_genres, extract_character_names
-from ai.summary import generate_plot_summary
+from .api import get_tmdb_details, get_episode_details, search_tmdb
+from .utils import extract_cast, extract_genres, extract_character_names
+from ..ai.summary import generate_plot_summary
 import pandas as pd
 import sys
 import os

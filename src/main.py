@@ -15,7 +15,7 @@ def main():
     if mode == 1:  # Compare to integer
         # Real-time processing logic
         # Load data from Google Sheets
-        df = load_google_sheet_data(API_KEYS["gspread"])
+        df = load_google_sheet_data(API_KEYS["gspread"], sheet_name="Timeline")
 
         # Specify the number of items to process
         items_to_process = None  # Change this value to process a different number of entries

@@ -5,84 +5,160 @@ import pandas as pd
 # Add the src directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src.google_sheets.sheets import write_dataframe_to_sheet  # Adjusted import path
-from api import search_tmdb, get_tmdb_details
-from utils import extract_cast, extract_genres, extract_character_names
+from src.google_sheets.sheets import write_dataframe_to_sheet, load_google_sheet_data
+from src.tmdb.scraper import find_tmdb_id, process_media_entry
 from src.api_config import API_KEYS
 
-def main():
+def lookup_and_process_row(row, tmdb_key, gem_key):
     """
-    Standalone script to search TMDb for a user-inputted title, select the correct result,
-    and output detailed information for the selected title.
+    Perform a lookup for a single row and process the selected result.
+
+    Args:
+        row (pd.Series): A row from the DataFrame containing media details.
+        tmdb_key (str): The TMDb API key.
+        gem_key (str): The Gemini API key.
+
+    Returns:
+        dict: Processed data for the selected result, or None if skipped.
     """
-    tmdb_key = API_KEYS["tmdb"]
-    user_title = input("Enter the title to search for: ").strip()
+    # Debugging: Print the row being processed
+    print(f"\nProcessing row: {row.to_dict()}")
 
-    # Search TMDb for the title
-    search_results = search_tmdb(query=user_title, api_key=tmdb_key, is_tv=False)
-    if not search_results.get("results"):
-        print("No results found.")
-        return
+    # Use find_tmdb_id to fetch the TMDb ID and handle TV shows and episodes
+    show_id, episode_id, manual_review = find_tmdb_id(row, tmdb_key)
+    print(f"TMDb ID: {show_id}, Episode ID: {episode_id}, Manual Review: {manual_review}")  # Debugging output
 
-    # Display the top 5 results
-    results = search_results["results"][:5]
-    print("\nTop 5 Results:")
-    for i, result in enumerate(results, start=1):
+    if not show_id:
+        print(f"No valid TMDb ID found for title: {row['title']}. Skipping.")
+        return None
+
+    # Prepare a mock result for manual selection
+    search_results = [
+        {
+            "id": episode_id if episode_id else show_id,
+            "title": row["title"],
+            "manual_review": manual_review
+        }
+    ]
+
+    # Display the result for manual verification
+    print("\nResult for Verification:")
+    for i, result in enumerate(search_results, start=1):
         print(f"{i}. {result.get('title', 'Unknown Title')} (ID: {result['id']})")
 
     # Let the user select the correct result
     try:
-        choice = int(input("\nEnter the number of the correct title (1-5): "))
-        if choice < 1 or choice > len(results):
+        choice = int(input("\nEnter the number of the correct title (1): "))
+        if choice != 1:
             raise ValueError
     except ValueError:
-        print("Invalid choice. Exiting.")
+        print(f"Invalid choice for title: {row['title']}. Skipping.")
+        return None
+
+    selected_result = search_results[0]
+    row["tmdb_id"] = selected_result["id"]
+
+    # Process the media entry
+    processed_data = process_media_entry(row, tmdb_key, gem_key, process_gemini=False)
+    print(f"Processed data: {processed_data}")  # Debugging output
+
+    if not processed_data:
+        print(f"Failed to process the media entry for title: {row['title']}. Skipping.")
+        return None
+
+    return processed_data
+
+def process_single_lookup():
+    """
+    Perform a single lookup for a user-inputted title.
+    """
+    tmdb_key = API_KEYS["tmdb"]
+    gem_key = API_KEYS["gemini"]
+
+    # Get user input for the title
+    user_title = input("Enter the title to search for: ").strip()
+
+    # Create a mock row for find_tmdb_id
+    row = pd.Series({
+        "title": user_title,
+        "show/trilogy": None,
+        "season": None,
+        "episode number": None,
+        "media type": "movie"  # Default to movie; adjust if needed
+    })
+
+    # Lookup and process the row
+    processed_data = lookup_and_process_row(row, tmdb_key, gem_key)
+    if not processed_data:
+        print("No data processed. Exiting.")
         return
 
-    selected_result = results[choice - 1]
-    tmdb_id = selected_result["id"]
+    # Convert the processed data to a DataFrame
+    df = pd.DataFrame([processed_data])
 
-    # Fetch detailed information for the selected title
-    details = get_tmdb_details(tmdb_id, tmdb_key, is_tv=False)
-    if not details:
-        print("Failed to fetch details for the selected title.")
-        return
-
-    # Extract information using existing utility functions
-    title = details.get("title", "Unknown Title")
-    release_date = details.get("release_date", "Unknown Release Date")
-    rating = details.get("vote_average", "N/A")
-    genres = extract_genres(details)
-    cast = extract_cast(details)
-    character_names = extract_character_names(details)
-    overview = details.get("overview", "No overview available")
-
-    # Output the information
-    print("\nSelected Title Details:")
-    print(f"Title: {title}")
-    print(f"Release Date: {release_date}")
-    print(f"Rating: {rating}")
-    print(f"Genres: {', '.join(genres) if genres else 'None'}")
-    print(f"Overview: {overview}")
-    print("Cast:")
-    for actor in cast:
-        print(f"  - {actor['name']} as {actor['character']} ({actor['gender']})")
-    print(f"Character Names: {', '.join(character_names) if character_names else 'None'}")
-
-    # Prepare data for writing to Google Sheet
-    data = {
-        "Title": [title],
-        "Release Date": [release_date],
-        "Rating": [rating],
-        "Genres": [', '.join(genres) if genres else 'None'],
-        "Overview": [overview],
-        "Cast": [', '.join([f"{actor['name']} as {actor['character']} ({actor['gender']})" for actor in cast])],
-        "Character Names": [', '.join(character_names) if character_names else 'None']
-    }
-    df = pd.DataFrame(data)
+    # Debugging: Print the DataFrame before writing to Google Sheets
+    print("\nDataFrame to be written:")
+    print(df)
 
     # Write to the "Single Lookup" sheet
     write_dataframe_to_sheet(df, "ref/service_account.json", sheet_name="Single Lookup")
+
+    # Output the processed data
+    print("\nProcessed Data:")
+    print(df.to_string(index=False))
+
+def process_batch_lookup():
+    """
+    Perform batch processing for titles in the "Batch Clean" sheet with manual verification.
+    """
+    tmdb_key = API_KEYS["tmdb"]
+    gem_key = API_KEYS["gemini"]
+
+    # Load the "Batch Clean" sheet
+    df = load_google_sheet_data(API_KEYS["gspread"], sheet_name="Batch Clean")
+
+    # Ensure the "title" column exists
+    if "title" not in df.columns:
+        print("The 'Batch Clean' sheet does not contain a 'title' column. Exiting.")
+        return
+
+    results = []
+
+    # Loop through each row in the DataFrame
+    for _, row in df.iterrows():
+        processed_data = lookup_and_process_row(row, tmdb_key, gem_key)
+        if processed_data:
+            results.append(processed_data)
+
+    # Convert the results to a DataFrame
+    results_df = pd.DataFrame(results)
+
+    # Debugging: Print the DataFrame before writing to Google Sheets
+    print("\nFinal DataFrame to be written:")
+    print(results_df)
+
+    # Write to the "Batch Clean Results" sheet
+    write_dataframe_to_sheet(results_df, "ref/service_account.json", sheet_name="Batch Clean Results")
+
+    # Output the processed data
+    print("\nBatch Processed Data:")
+    print(results_df.to_string(index=False))
+
+def main():
+    """
+    Main function to allow the user to choose between single lookup or batch processing.
+    """
+    print("Choose an option:")
+    print("1. Single Lookup")
+    print("2. Batch Lookup")
+    choice = input("Enter your choice (1 or 2): ").strip()
+
+    if choice == "1":
+        process_single_lookup()
+    elif choice == "2":
+        process_batch_lookup()
+    else:
+        print("Invalid choice. Exiting.")
 
 if __name__ == "__main__":
     main()
