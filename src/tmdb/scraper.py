@@ -195,7 +195,7 @@ def process_all_entries(df, tmdb_key, gem_key, items_to_process=None, process_ge
     # Convert results to a DataFrame
     return pd.DataFrame(results)
 
-def process_all_entries_multithreading(df, tmdb_key, gem_key, items_to_process=None):
+def process_all_entries_multithreading(df, tmdb_key, gem_key, items_to_process=None, process_gemini=False):
     """
     Process all media entries in the DataFrame using multithreading.
 
@@ -218,7 +218,7 @@ def process_all_entries_multithreading(df, tmdb_key, gem_key, items_to_process=N
     with ThreadPoolExecutor() as executor:
         results = list(
             executor.map(
-                lambda row: process_media_entry(row, tmdb_key, gem_key),
+                lambda row: process_media_entry(row, tmdb_key, gem_key, process_gemini=process_gemini),
                 [row for _, row in df.iterrows()]
             )
         )

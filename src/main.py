@@ -18,18 +18,18 @@ def main():
         df = load_google_sheet_data(API_KEYS["gspread"])
 
         # Specify the number of items to process
-        items_to_process = 14  # Change this value to process a different number of entries
+        items_to_process = None  # Change this value to process a different number of entries
 
         process_gemini = False  # Set to True to process Gemini summaries
 
          # Process the specified number of entries
         if not process_gemini:
-            results_df = process_all_entries_multithreading(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process)
+            results_df = process_all_entries_multithreading(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process, process_gemini=process_gemini)
         else:
             results_df = process_all_entries(df, API_KEYS["tmdb"], API_KEYS["gemini"], items_to_process=items_to_process, process_gemini=process_gemini)
 
         # Save results to a CSV
-        save_results_to_csv(results_df, "data/Scraped_Timeline.csv")
+        save_results_to_csv(results_df, "data/Scraped_Timeline_No_Summaries.csv")
 
         # Write results to a new sheet in the original Google Sheet
         write_dataframe_to_sheet(results_df, "ref/service_account.json", sheet_name="Scraped Data")
