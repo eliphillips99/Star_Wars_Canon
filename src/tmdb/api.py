@@ -74,8 +74,29 @@ def get_episode_details(tv_id, season, episode, api_key):
     response = requests.get(endpoint, params={"api_key": api_key, "append_to_response": "credits"})
     if response.status_code == 200:
         data = response.json()
-        #print(f"Episode details fetched: {data}")
         return data
     else:
         print(f"Failed to fetch episode details for TV ID {tv_id}, Season {season}, Episode {episode}")
+        return None
+
+def get_season_details(tv_id, season, api_key):
+    """
+    Fetch details for a specific season of a TV show.
+
+    Args:
+        tv_id (int): The TMDb ID of the TV show.
+        season (int): The season number.
+        api_key (str): The TMDb API key.
+
+    Returns:
+        dict: The details of the specific season.
+    """
+    endpoint = f"{BASE_URL}/tv/{tv_id}/season/{season}"
+    print(f"Fetching season details from TMDb API: {endpoint}")
+    response = requests.get(endpoint, params={"api_key": api_key})
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        print(f"Failed to fetch season details for TV ID {tv_id}, Season {season}")
         return None
