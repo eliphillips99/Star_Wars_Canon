@@ -2,7 +2,7 @@ import gspread
 import pandas as pd
 from gspread_dataframe import set_with_dataframe
 
-def load_google_sheet_data(api_key):
+def load_google_sheet_data(api_key, sheet_name="Timeline"):
     """
     Load data from the Google Sheet.
 
@@ -14,7 +14,7 @@ def load_google_sheet_data(api_key):
     """
     gc = gspread.api_key(api_key)
     sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1PyWmeM1nwzQV6anIfTp9nre5Wg6-eTfFyYBk8R9z4cY/edit")
-    worksheet = sh.worksheet("Timeline")
+    worksheet = sh.worksheet(sheet_name)
     data = worksheet.get_all_records()  # Import all data without specifying headers
     df = pd.DataFrame(data)
 
